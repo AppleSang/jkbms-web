@@ -1,18 +1,139 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JK-BMS</title>
-<link rel="stylesheet" href="style.css">
+<link rel="icon" href="res/jk-web.ico">
+<title>JK-BMS Monitor</title>
 <style>
-  #svgTrack{stroke:var(--secondary)}
+:root {
+  --primary: #3B82F6; --secondary: #8B5CF6;
+  --success: #16A34A; --warning: #D97706; --danger: #DC2626;
+  --surface: #FFFFFF; --surface-muted: #F3F4F6;
+  --text: #111827; --text-muted: #6B7280;
+  --border: #E5E7EB; --bg: #F9FAFB; --card: #FFFFFF;
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px;
+  --ok: #16A34A; --warn: #D97706; --bad: #DC2626;
+  --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+.dark {
+  --surface: #1F2937; --surface-muted: #374151;
+  --text: #F9FAFB; --text-muted: #9CA3AF;
+  --border: #4B5563; --bg: #111827; --card: #1F2937;
+  --ok: #34D399; --warn: #FBBF24; --bad: #F87171;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-primary); background: var(--bg); color: var(--text); min-height: 100vh; padding: 16px; line-height: 1.5; }
+
+@keyframes scale-in-center { 0% { transform: scale(0.92); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes fade-in-up { 0% { transform: translateY(12px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+.spark { display: block; width: 100%; height: 26px; margin-top: 8px; color: var(--primary); opacity: .9; overflow: visible; }
+.overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+.overlay[hidden] { display: none; }
+.popup { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; max-width: 400px; width: calc(100% - 40px); text-align: center; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: scale-in-center 0.3s ease-out; }
+.bt-logo { color: var(--primary); margin: 0 auto; }
+.popup h3 { font-size: 1.25rem; font-weight: 700; }
+.popup p { font-size: .875rem; color: var(--text-muted); line-height: 1.5; }
+.popup button { padding: 12px; width: 100%; }
+body.vi .tile .k, body.vi .panel h2, body.vi .ring .val small { text-transform: none; letter-spacing: normal; }
+
+header { max-width: 1080px; margin: 0 auto 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.logo { height: 32px; vertical-align: middle; margin-right: 8px; }
+h1 { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+h1 .icon { color: var(--primary); }
+.spacer { flex: 1; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); display: inline-block; margin-right: 6px; transition: background 0.3s, box-shadow 0.3s; }
+.dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: pulse 2s ease-in-out infinite; }
+.dot.busy { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+#state { font-size: .8125rem; color: var(--text-muted); }
+
+button { background: var(--primary); border: none; color: #FFF; font-weight: 600; padding: 8px 16px; border-radius: var(--radius-md); font-size: .875rem; cursor: pointer; transition: filter .15s, transform .15s, box-shadow .15s; font-family: var(--font-primary); }
+button:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+button:active { transform: translateY(0); box-shadow: none; }
+button:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+button.ghost { background: var(--surface-muted); color: var(--text); border: 1px solid var(--border); }
+button.ghost:hover { background: var(--border); box-shadow: none; }
+select { background: var(--surface-muted); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 6px 8px; font-size: .8125rem; font-family: var(--font-primary); }
+label.chk { font-size: .8125rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; user-select: none; }
+.iconbtn { padding: 8px 10px; font-size: 1rem; }
+
+main { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.notice { background: rgba(217,119,6,0.1); border: 1px solid rgba(217,119,6,0.3); color: var(--text); padding: 12px 16px; border-radius: var(--radius-md); font-size: .875rem; line-height: 1.5; }
+.soc-card { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; display: flex; gap: 24px; align-items: center; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.06); animation: scale-in-center 0.4s ease-out; }
+.ring { position: relative; width: 170px; height: 170px; flex: none; }
+.ring svg { transform: rotate(-90deg); }
+.ring .val { position: absolute; inset: 0; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px; }
+.ring .val b { font-size: 2.5rem; line-height: 1; font-weight: 800; }
+.ring .val .pct { font-size: 1.125rem; color: var(--text-muted); margin-top: .9rem; }
+.soc-info { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 8px; }
+.bar { height: 14px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0%; border-radius: 99px; transition: width .5s; background: linear-gradient(90deg, var(--success), #84CC16); }
+.ah-line { font-size: .9375rem; color: var(--text-muted); display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.ah-line b { color: var(--text); font-size: 1.25rem; font-weight: 700; }
+.badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.badge { font-size: .75rem; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 500; }
+.badge.on { color: #FFF; background: var(--ok); border-color: transparent; font-weight: 600; }
+.badge.bal { color: #FFF; background: var(--warn); border-color: transparent; font-weight: 600; }
+.badge.err { color: #FFF; background: var(--bad); border-color: transparent; font-weight: 600; }
+.badge.dev { color: var(--primary); border-color: var(--primary); background: rgba(59,130,246,0.08); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; transition: border-color .15s, transform .2s, box-shadow .2s; animation: fade-in-up 0.4s ease-out forwards; }
+.tile:nth-child(1) { animation-delay: 0ms; } .tile:nth-child(2) { animation-delay: 50ms; } .tile:nth-child(3) { animation-delay: 100ms; }
+.tile:nth-child(4) { animation-delay: 150ms; } .tile:nth-child(5) { animation-delay: 200ms; } .tile:nth-child(6) { animation-delay: 250ms; }
+.tile:nth-child(7) { animation-delay: 300ms; } .tile:nth-child(8) { animation-delay: 350ms; } .tile:nth-child(9) { animation-delay: 400ms; }
+.tile:nth-child(10) { animation-delay: 450ms; } .tile:nth-child(11) { animation-delay: 500ms; }
+.tile:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.dark .tile:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.tile .k { font-size: .6875rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; font-family: var(--font-mono); font-weight: 500; }
+.tile .v { font-size: 1.25rem; font-weight: 700; }
+.tile .u { font-size: .75rem; color: var(--text-muted); font-weight: 400; margin-left: 2px; }
+.tile.warn .v { color: var(--warn); } .tile.bad .v { color: var(--bad); } .tile.good .v { color: var(--ok); }
+
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; }
+.panel h2 { font-size: .8125rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; font-weight: 600; }
+.controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.cbtn { flex: 1; min-width: 140px; background: var(--surface-muted); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 10px; font-size: .8125rem; cursor: pointer; text-align: center; font-weight: 600; transition: filter .15s, transform .15s, border-color .15s, background .15s; font-family: var(--font-primary); }
+.cbtn b { display: block; font-size: .875rem; letter-spacing: .5px; margin-bottom: 2px; }
+.cbtn:hover { filter: brightness(1.08); border-color: var(--primary); transform: translateY(-1px); }
+.cbtn:active { transform: translateY(0); }
+.cbtn.active { background: rgba(22,163,74,0.12); border-color: var(--ok); color: var(--ok); }
+.cbtn.danger { border-color: rgba(220,38,38,0.4); color: var(--bad); }
+.cbtn.danger.active { background: rgba(220,38,38,0.12); border-color: var(--bad); }
+.cbtn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.ctrl-note { font-size: .75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+
+#cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+.cell { background: var(--surface-muted); border: 1px solid var(--border); border-radius: var(--radius-sm); text-align: center; padding: 8px 4px; transition: background 0.3s, outline 0.3s; }
+.cell.min { outline: 2px solid var(--bad); background: rgba(220,38,38,0.1); }
+.cell.max { outline: 2px solid var(--ok); background: rgba(22,163,74,0.1); }
+.cell .n { font-size: .6875rem; color: var(--text-muted); font-family: var(--font-mono); }
+.cell .m { font-weight: 700; font-size: .875rem; }
+
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.setting-group { background: var(--surface-muted); border-radius: var(--radius-md); padding: 12px; }
+.setting-group h3 { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; font-weight: 600; }
+.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: .8125rem; border-bottom: 1px solid var(--border); }
+.setting-row:last-child { border-bottom: none; }
+.setting-row .sk { color: var(--text-muted); }
+.setting-row .sv { font-weight: 600; font-family: var(--font-mono); font-size: .8125rem; }
+
+details { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+summary { cursor: pointer; color: var(--text-muted); font-size: .875rem; font-weight: 500; }
+pre { font-size: .6875rem; line-height: 1.5; color: var(--text-muted); white-space: pre-wrap; word-break: break-all; margin-top: 10px; max-height: 260px; overflow: auto; background: var(--surface-muted); border-radius: var(--radius-sm); padding: 10px; font-family: var(--font-mono); }
+#rawHex { font-size: .6875rem; word-break: break-all; line-height: 1.5; margin-top: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+footer { max-width: 1080px; margin: 24px auto 0; color: var(--text-muted); font-size: .75rem; line-height: 1.6; text-align: center; }
+@media(max-width: 520px) { .ring { width: 140px; height: 140px; } .ring .val b { font-size: 2rem; } .settings-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body class="dark">
 
 <header>
-  <h1><span>&#9889;</span> JK-BMS Monitor <small id="subTitle" style="color:var(--muted-foreground);font-size:.8em"></small></h1>
+  <h1><img src="res/jk-web.svg" alt="" class="logo"><span class="icon">&#9889;</span> JK-BMS <small id="subTitle" style="color:var(--text-muted);font-size:.8em"></small></h1>
   <div class="spacer"></div>
   <label class="chk"><span data-i18n="frameVerLbl"></span>
     <select id="modeSel">
@@ -23,6 +144,7 @@
   </label>
   <button id="btnConnect" data-i18n="btnConnect"></button>
   <button id="btnDisconnect" class="ghost" disabled data-i18n="btnDisconnect"></button>
+  <button id="btnSettings" class="ghost iconbtn" title="Cài đặt BMS">&#9881;</button>
   <button id="btnLang" class="ghost iconbtn">EN</button>
   <button id="btnTheme" class="ghost iconbtn">&#9789;</button>
   <div><span class="dot" id="dot"></span><span id="state"></span></div>
@@ -34,19 +156,21 @@
   <div class="soc-card">
     <div class="ring">
       <svg width="170" height="170">
-        <circle id="svgTrack" cx="85" cy="85" r="74" fill="none" stroke-width="13"/>
+        <circle id="svgTrack" cx="85" cy="85" r="74" fill="none" stroke="var(--surface-muted)" stroke-width="13"/>
         <circle id="arc" cx="85" cy="85" r="74" fill="none" stroke="url(#g)" stroke-width="13"
                 stroke-linecap="round" stroke-dasharray="464.9" stroke-dashoffset="464.9"/>
         <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#84cc16"/>
+          <stop offset="0%" stop-color="var(--success)"/><stop offset="100%" stop-color="#84CC16"/>
         </linearGradient></defs>
       </svg>
       <div class="val"><b id="socBig">--</b><span class="pct">%</span></div>
     </div>
     <div class="soc-info">
-      <div class="ah-line"><span data-i18n="remain"></span> <b id="ahRemain">--</b> Ah · <span data-i18n="capCfg"></span> <span id="capSet">--</span></div>
-      <div class="bar light-bar"><i id="socBar"></i></div>
-      <div class="ah-line" style="font-size:.85rem">
+      <div class="ah-line">
+        <span data-i18n="remain"></span> <b id="ahRemain">--</b> Ah · <span data-i18n="capCfg"></span> <span id="capSet">--</span>
+      </div>
+      <div class="bar"><i id="socBar"></i></div>
+      <div class="ah-line" style="font-size:.8125rem">
         <span data-i18n="sohLbl"></span> <span id="soh">--</span>
         &nbsp;&bull;&nbsp; <span data-i18n="cyclesLbl"></span> <span id="cycles">--</span>
         &nbsp;&bull;&nbsp; <span data-i18n="agedLbl"></span> <span id="capAged">--</span>
@@ -87,6 +211,11 @@
     <div class="ctrl-note" data-i18n="ctrlNote"></div>
   </div>
 
+  <section id="settingsSection" class="panel" hidden>
+    <h2 data-i18n="settingsTitle"></h2>
+    <div class="settings-grid" id="settingsGrid"></div>
+  </section>
+
   <div class="panel">
     <h2><span data-i18n="cellsTitle"></span> <span id="cellCount" style="text-transform:none"></span></h2>
     <div id="cells"></div>
@@ -105,9 +234,9 @@
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M7 7 L17 17 L12 22 L12 2 L17 7 L7 17"/>
     </svg>
-    <h3 data-i18n="popupTitle">Kết nối JK-BMS</h3>
+    <h3 data-i18n="popupTitle"></h3>
     <p data-i18n="popupDesc"></p>
-    <button type="button" id="btnPopupConnect" data-i18n="btnConnect">Kết nối Bluetooth</button>
+    <button type="button" id="btnPopupConnect" data-i18n="btnConnect"></button>
   </div>
 </div>
 
@@ -122,45 +251,47 @@ const HEADER = [0x55, 0xAA, 0xEB, 0x90];
 const FRAME_SIZE = 300;
 const RESP_TYPES = [1, 2, 3];
 const HIST_MS = 30000;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const T = {
   vi: {
     subTitle: 'qua Bluetooth BLE',
     frameVerLbl: 'Phiên bản khung:',
-    optAuto: 'Tự động nhận diện', optOld24: 'Cũ - fw < 11 (24S)', optNew32: 'Mới - fw ≥ 11 (32S)',
+    optAuto: 'Tự nhận diện', optOld24: 'Cũ - fw < 11 (24S)', optNew32: 'Mới - fw ≥ 11 (32S)',
     btnConnect: 'Kết nối Bluetooth', btnDisconnect: 'Ngắt kết nối', notConnected: 'Chưa kết nối',
-    remain: 'Còn lại', capCfg: 'cấu hình', sohLbl: 'SOH:', cyclesLbl: 'Chu kỳ sạc:', agedLbl: 'DL lão hóa:',
+    remain: 'Còn lại', capCfg: 'cấu hình', sohLbl: 'SOH:', cyclesLbl: 'Chu kỳ sạc:', agedLbl: 'Pin lão hóa:',
     devBadge: 'Thiết bị', mosCharge: 'MOS sạc', mosDischarge: 'MOS xả',
-    balancing: 'Cân bằng', errBadge: 'Lỗi', errNone: 'không có',
+    balancing: 'Cân bằng', errBadge: 'Lỗi', errNone: 'không',
     tileVolt: 'Điện áp tổng', tileCurrent: 'Dòng điện',
     tilePower: 'Công suất', tileCells: 'Số cell', tileCMin: 'Cell thấp nhất', tileCMax: 'Cell cao nhất',
-    tileDelta: 'Chênh lệch cell', tileT1: 'Nhiệt độ pin 1', tileT2: 'Nhiệt độ pin 2',
+    tileDelta: 'Chênh lệch cell', tileT1: 'Nhiệt độ 1', tileT2: 'Nhiệt độ 2',
     tileTMos: 'Nhiệt độ MOS', tileBalCur: 'Dòng cân bằng', tileUptime: 'Thời gian chạy',
     ctrlTitle: 'Điều khiển BMS', swCharge: 'SẠC', swDischarge: 'XẢ', swBalance: 'CÂN BẰNG',
-    stOn: 'ĐANG BẬT', stOff: 'ĐANG TẮT', stUnsupported: 'KHÔNG HỖ TRỢ',
-    ctrlNote: 'Nút bấm ghi trực tiếp vào BMS. Emergency chỉ hỗ trợ firmware ≥ 11 và có hộp thoại cảnh báo trước khi bật.',
+    stOn: 'BẬT', stOff: 'TẮT', stUnsupported: 'KHÔNG HỖ TRỢ',
+    ctrlNote: 'Nút bấm ghi trực tiếp vào BMS. Emergency chỉ hỗ trợ firmware ≥ 11, có cảnh báo trước khi bật.',
     cellsTitle: 'Điện áp từng cell', logSummary: 'Nhật ký & dữ liệu thô',
-    noticeHtml: 'Trình duyệt này không hỗ trợ Web Bluetooth. Hãy dùng <b>Chrome hoặc Edge</b> trên máy tính hoặc Android. Trang phải chạy qua <b>https://</b> hoặc <b>http://localhost</b>. Chỉ hỗ trợ mạch JK-BMS dùng Bluetooth <b>BLE</b>, không hỗ trợ Bluetooth cổ điển SPP.',
+    settingsTitle: 'Cài đặt BMS (chỉ xem)',
+    noticeHtml: 'Trình duyệt này không hỗ trợ Web Bluetooth. Hãy dùng <b>Chrome hoặc Edge</b> trên máy tính hoặc Android. Trang phải chạy qua <b>https://</b> hoặc <b>http://localhost</b>. Chỉ hỗ trợ JK-BMS Bluetooth <b>BLE</b>, không hỗ trợ Bluetooth cổ điển SPP.',
     stSearching: 'Đang tìm thiết bị...', stConnecting: 'Đang kết nối...', stWaitData: 'Đã kết nối - chờ dữ liệu...',
-    stReceiving: 'Đã kết nối - đang nhận dữ liệu', stFailed: 'Kết nối thất bại', stLost: 'Đã mất kết nối',
+    stReceiving: 'Đã kết nối - đang nhận dữ liệu', stFailed: 'Kết nối thất bại', stLost: 'Mất kết nối',
     logReady: 'Nhấn "Kết nối Bluetooth" rồi chọn BMS trong danh sách.',
     logNoBt: 'Web Bluetooth không khả dụng trên trình duyệt này.',
     logSelected: 'Đã chọn:', logGattOk: 'Kết nối GATT thành công,', logChars: 'characteristic FFE1.',
-    logWriteErr: 'Ghi lệnh lỗi:', logCancelled: 'Bạn đã hủy cửa sổ chọn thiết bị.',
-    logNoSvc: 'Thiết bị đã chọn không có service JK-BMS (FFE0). Có thể đây không phải JK-BMS BLE, BMS đang được ứng dụng khác chiếm, hoặc tín hiệu yếu. Thử lại và chọn đúng thiết bị JK.',
-    logFrameLong: 'Bộ đệch tràn, xóa.', logBadFrame: 'Khung lỗi CRC/loại (0x{0}), tìm khung kế tiếp...',
-    logJunk: 'Đã loại bỏ {0} byte rác giữa các khung.', logDevInfo: 'Model={0} HW={1} SW={2} | layout:',
-    logAutoDet: 'tự động:', logManual: 'đặt thủ công', logCellOk: 'Nhận dữ liệu:',
+    logWriteErr: 'Ghi lệnh lỗi:', logCancelled: 'Bạn đã huỷ cửa sổ chọn thiết bị.',
+    logNoSvc: 'Thiết bị không có service JK-BMS (FFE0). Có thể không phải JK-BMS BLE, BMS đang bị chiếm, hoặc tín hiệu yếu.',
+    logFrameLong: 'Bộ đệm tràn, đã xoá.', logBadFrame: 'Khung lỗi CRC/loại (0x{0}), tìm khung kế...',
+    logJunk: 'Đã loại {0} byte rác.', logDevInfo: 'Model={0} HW={1} SW={2} | layout:',
+    logAutoDet: 'tự động:', logManual: 'thủ công', logCellOk: 'Dữ liệu:',
     logUnknownType: 'Khung loại 0x{0} chưa hỗ trợ.',
-    logInvalidCells: 'Khung cell info không hợp lệ (không có cell nào).',
+    logInvalidCells: 'Khung cell info không hợp lệ.',
     logSent: 'Đã gửi: {0} → {1} (reg 0x{2})',
-    logNotConn: 'Chưa kết nối BMS.', logNoSwState: 'Chưa nhận được trạng thái từ BMS.',
-    logEmOnly11: 'Emergency mode chỉ hỗ trợ firmware ≥ 11.',
+    logNotConn: 'Chưa kết nối BMS.', logNoSwState: 'Chưa nhận trạng thái từ BMS.',
+    logEmOnly11: 'Emergency chỉ hỗ trợ firmware ≥ 11.',
     logEmOffQ: 'Tắt EMERGENCY MODE?',
     popupTitle: 'Kết nối JK-BMS',
-    popupDesc: 'Nhấn nút bên dưới rồi chọn BMS của bạn trong danh sách thiết bị Bluetooth.',
-    logEmWarn: 'CẢNH BÁO NGUY HIỂM!\n\nBật EMERGENCY MODE sẽ buộc bật MOS sạc/xả bất chấp các bảo vệ của BMS (áp thấp, quá dòng, quá nhiệt...). Việc này có thể làm hỏng pin hoặc gây nguy hiểm.\n\nChỉ dùng khi thực sự khẩn cấp. Bạn chắc chắn muốn BẬT?',
-    on: 'ON', off: 'OFF'
+    popupDesc: 'Nhấn nút bên dưới rồi chọn BMS trong danh sách thiết bị Bluetooth.',
+    logEmWarn: 'CẢNH BÁO NGUY HIỂM!\n\nEMERGENCY MODE buộc bật MOS sạc/xả bất chấp bảo vệ BMS (áp thấp, quá dòng, quá nhiệt...). Có thể làm hỏng pin hoặc gây nguy hiểm.\n\nChỉ dùng khi thực sự cần. Bạn chắc chắn muốn BẬT?',
+    on: 'BẬT', off: 'TẮT'
   },
   en: {
     subTitle: 'via Bluetooth BLE',
@@ -172,32 +303,33 @@ const T = {
     balancing: 'Balancing', errBadge: 'Errors', errNone: 'none',
     tileVolt: 'Total voltage', tileCurrent: 'Current',
     tilePower: 'Power', tileCells: 'Cells', tileCMin: 'Lowest cell', tileCMax: 'Highest cell',
-    tileDelta: 'Cell delta', tileT1: 'Battery temp 1', tileT2: 'Battery temp 2',
+    tileDelta: 'Cell delta', tileT1: 'Temp 1', tileT2: 'Temp 2',
     tileTMos: 'MOS temp', tileBalCur: 'Balance current', tileUptime: 'Runtime',
     ctrlTitle: 'BMS Controls', swCharge: 'CHARGE', swDischarge: 'DISCHARGE', swBalance: 'BALANCE',
     stOn: 'ON', stOff: 'OFF', stUnsupported: 'NOT SUPPORTED',
-    ctrlNote: 'Buttons write directly to the BMS. Emergency mode requires firmware ≥ 11 and shows a warning dialog before enabling.',
+    ctrlNote: 'Buttons write directly to BMS. Emergency mode requires firmware ≥ 11 with a warning dialog.',
     cellsTitle: 'Cell voltages', logSummary: 'Log & raw data',
-    noticeHtml: 'This browser does not support Web Bluetooth. Use <b>Chrome or Edge</b> on desktop or Android. The page must be served over <b>https://</b> or <b>http://localhost</b>. Only JK-BMS units with Bluetooth <b>BLE</b> are supported, not classic Bluetooth (SPP).',
-    stSearching: 'Searching for devices...', stConnecting: 'Connecting...', stWaitData: 'Connected - waiting for data...',
+    settingsTitle: 'BMS Settings (read-only)',
+    noticeHtml: 'This browser does not support Web Bluetooth. Use <b>Chrome or Edge</b> on desktop or Android. Page must be served over <b>https://</b> or <b>http://localhost</b>. Only JK-BMS <b>BLE</b> supported, not classic Bluetooth (SPP).',
+    stSearching: 'Searching...', stConnecting: 'Connecting...', stWaitData: 'Connected - waiting for data...',
     stReceiving: 'Connected - receiving data', stFailed: 'Connection failed', stLost: 'Disconnected',
-    logReady: 'Press "Connect Bluetooth" and pick your BMS from the list.',
-    logNoBt: 'Web Bluetooth is not available in this browser.',
-    logSelected: 'Selected:', logGattOk: 'GATT connection established,', logChars: 'FFE1 characteristics.',
-    logWriteErr: 'Write error:', logCancelled: 'Device chooser was cancelled.',
-    logNoSvc: 'The selected device has no JK-BMS service (FFE0). It may not be a JK-BMS BLE unit, the BMS may be busy with another app, or the signal is weak. Try again and pick the right JK device.',
+    logReady: 'Press "Connect Bluetooth" and pick your BMS.',
+    logNoBt: 'Web Bluetooth not available.',
+    logSelected: 'Selected:', logGattOk: 'GATT connected,', logChars: 'FFE1 characteristics.',
+    logWriteErr: 'Write error:', logCancelled: 'Device chooser cancelled.',
+    logNoSvc: 'No JK-BMS service (FFE0). Not a JK-BMS BLE, busy, or weak signal.',
     logFrameLong: 'Buffer overflow, cleared.', logBadFrame: 'Corrupt frame CRC/type (0x{0}), resyncing...',
-    logJunk: 'Discarded {0} junk bytes between frames.', logDevInfo: 'Model={0} HW={1} SW={2} | layout:',
+    logJunk: 'Discarded {0} junk bytes.', logDevInfo: 'Model={0} HW={1} SW={2} | layout:',
     logAutoDet: 'auto:', logManual: 'manual', logCellOk: 'Data:',
     logUnknownType: 'Unsupported frame type 0x{0}.',
-    logInvalidCells: 'Invalid cell info frame (no valid cells).',
+    logInvalidCells: 'Invalid cell info frame.',
     logSent: 'Sent: {0} → {1} (reg 0x{2})',
-    logNotConn: 'Not connected to a BMS.', logNoSwState: 'No state received from BMS yet.',
-    logEmOnly11: 'Emergency mode requires firmware ≥ 11.',
+    logNotConn: 'Not connected.', logNoSwState: 'No state from BMS yet.',
+    logEmOnly11: 'Emergency requires firmware ≥ 11.',
     logEmOffQ: 'Turn OFF EMERGENCY MODE?',
     popupTitle: 'Connect JK-BMS',
-    popupDesc: 'Press the button below and pick your BMS from the Bluetooth device list.',
-    logEmWarn: 'DANGER WARNING!\n\nEMERGENCY MODE forces charge/discharge MOSFETs on regardless of BMS protections (undervoltage, overcurrent, overtemperature...). This can damage the battery or create safety hazards.\n\nUse only in a genuine emergency. Are you sure you want to ENABLE it?',
+    popupDesc: 'Press the button below and pick your BMS from the Bluetooth list.',
+    logEmWarn: 'DANGER!\n\nEMERGENCY MODE forces MOSFETs on regardless of protections. Can damage battery or cause hazards.\n\nUse only in genuine emergency. ENABLE?',
     on: 'ON', off: 'OFF'
   }
 };
@@ -209,7 +341,6 @@ function t(key){
 }
 
 const $ = id => document.getElementById(id);
-
 const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(navigator.userAgent);
 
 const S = {
@@ -223,6 +354,8 @@ const S = {
   stateKey: 'notConnected',
   hist: {},
   popupConnecting: false,
+  settings: {},
+  settingsVisible: false,
 };
 
 const SPARK_KEYS = ['volt','curr','power','cmin','cmax','delta','t1','t2','tmos','balcur'];
@@ -239,7 +372,7 @@ function drawSpark(key){
   const svg = $('sp_' + key);
   if (!svg) return;
   const arr = S.hist[key];
-  if (!arr || arr.length < 2){ svg.innerHTML = ''; return; }
+  if (!arr || arr.length < 2){ svg.textContent = ''; return; }
   const now = arr[arr.length - 1][0];
   const t0 = Math.max(arr[0][0], now - HIST_MS);
   let mn = Infinity, mx = -Infinity;
@@ -252,8 +385,16 @@ function drawSpark(key){
     const y = 27 - ((p[1] - mn) / (mx - mn)) * 23;
     pts.push(x.toFixed(1) + ',' + y.toFixed(1));
   }
-  svg.innerHTML = '<polyline points="' + pts.join(' ') +
-    '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const pl = document.createElementNS(SVG_NS, 'polyline');
+  pl.setAttribute('points', pts.join(' '));
+  pl.setAttribute('fill', 'none');
+  pl.setAttribute('stroke', 'currentColor');
+  pl.setAttribute('stroke-width', '2');
+  pl.setAttribute('stroke-linecap', 'round');
+  pl.setAttribute('stroke-linejoin', 'round');
+  pl.setAttribute('vector-effect', 'non-scaling-stroke');
+  svg.appendChild(pl);
 }
 
 function updateSparks(){
@@ -273,14 +414,11 @@ function updateSparks(){
 const SW_ADDR = { charge: 0x1D, discharge: 0x1E, balance: 0x1F, emergency: 0x6B };
 const SW_BTN = { charge: 'swCharge', discharge: 'swDischarge', balance: 'swBalance', emergency: 'swEmergency' };
 
-function setState(key){
-  S.stateKey = key;
-  $('state').textContent = t(key);
-}
+function setState(key){ S.stateKey = key; $('state').textContent = t(key); }
 
 function log(msg){
   if (!IS_MOBILE){
-    console.log('%c[JK-BMS] ' + msg, 'color:#38bdf8');
+    console.log('%c[JK-BMS] ' + msg, 'color:#3B82F6;font-weight:600');
     return;
   }
   const time = new Date().toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US');
@@ -316,7 +454,6 @@ function findSeq(buf, from){
 }
 
 let junkCount = 0, junkLogT = 0;
-
 function flushJunk(){
   const now = Date.now();
   if (now - junkLogT > 10000){
@@ -371,9 +508,8 @@ async function writeChar(buf){
 }
 
 async function sendCmd(addr){
-  try{
-    await writeChar(buildRequest(addr));
-  }catch(e){ log(t('logWriteErr') + ' ' + e.message); }
+  try{ await writeChar(buildRequest(addr)); }
+  catch(e){ log(t('logWriteErr') + ' ' + e.message); }
 }
 
 async function connect(){
@@ -382,16 +518,11 @@ async function connect(){
   setState('stSearching');
   let device;
   try{
-    device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [SVC_UUID]
-    });
+    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SVC_UUID] });
   }catch(e){
-    setState('notConnected');
-    setPopupConnecting(false);
+    setState('notConnected'); setPopupConnecting(false);
     log(e.name === 'NotFoundError' ? t('logCancelled') : t('logWriteErr') + ' ' + e.message);
-    $('btnConnect').disabled = false;
-    $('btnDisconnect').disabled = !S.device;
+    $('btnConnect').disabled = false; $('btnDisconnect').disabled = !S.device;
     return;
   }
   S.device = device;
@@ -412,7 +543,7 @@ async function connect(){
     });
     S.gotData = false; S.swMajor = null; S.frameOff = null; S.numCells = null; S.capSetAh = null;
     S.sw = { charge: null, discharge: null, balance: null }; S.emergencyOn = false;
-    S.last = null; S.devName = null; S.swText = null; S.hist = {};
+    S.last = null; S.devName = null; S.swText = null; S.hist = {}; S.settings = {};
     setState('stWaitData');
     renderSwitches(); updateBadges();
     log(t('logGattOk') + ' ' + chrs.length + ' ' + t('logChars'));
@@ -424,10 +555,8 @@ async function connect(){
       if (!S.gotData || Date.now() - S.lastRx > 9000) sendCmd(CMD_CELL_INFO);
     }, 2000);
   }catch(e){
-    log(t('logNoSvc'));
-    log((e && e.message) ? e.message : '');
-    setState('stFailed');
-    setPopupConnecting(false);
+    log(t('logNoSvc')); log((e && e.message) ? e.message : '');
+    setState('stFailed'); setPopupConnecting(false);
     try{ device.gatt.disconnect(); }catch(_){}
     S.device = null;
   }
@@ -440,26 +569,15 @@ function connected(){ return S.device && S.device.gatt.connected; }
 function onDisconnected(){
   clearInterval(S.pollTimer);
   S.rxBuf = []; S.gotData = false;
-  setState('stLost');
-  renderSwitches();
-  log(t('stLost'));
-  setPopupConnecting(false);
+  setState('stLost'); renderSwitches();
+  log(t('stLost')); setPopupConnecting(false);
   if (!S.manualDisconnect) showPopup();
   S.manualDisconnect = false;
 }
 
-function disconnect(){
-  S.manualDisconnect = true;
-  if (connected()) S.device.gatt.disconnect();
-}
-
-function showPopup(){
-  if (navigator.bluetooth && !connected()) $('connPopup').hidden = false;
-}
-
-function hidePopup(){
-  $('connPopup').hidden = true;
-}
+function disconnect(){ S.manualDisconnect = true; if (connected()) S.device.gatt.disconnect(); }
+function showPopup(){ if (navigator.bluetooth && !connected()) $('connPopup').hidden = false; }
+function hidePopup(){ $('connPopup').hidden = true; }
 
 function setPopupConnecting(on){
   S.popupConnecting = on;
@@ -470,26 +588,17 @@ function setPopupConnecting(on){
 
 function onData(arr){
   S.lastRx = Date.now();
-  if (!S.gotData){
-    S.gotData = true;
-    setState('stReceiving');
-    setPopupConnecting(false);
-    hidePopup();
-  }
+  if (!S.gotData){ S.gotData = true; setState('stReceiving'); setPopupConnecting(false); hidePopup(); }
   feedFrames(arr);
 }
 
 function handleFrame(f){
-  const hex = [...f].map(b => b.toString(16).padStart(2,'0')).join('');
-  if (IS_MOBILE) $('rawHex').textContent = hex.replace(/(.{48})/g, '$&\n').trim();
-  else console.debug('[JK-BMS][RX type=0x' + f[4].toString(16) + ']', hex);
+  if (IS_MOBILE) $('rawHex').textContent = [...f].map(b => b.toString(16).padStart(2,'0')).join(' ').replace(/(.{48})/g, '$&\n').trim();
   if (f[4] === 0x03){
     const di = decodeDeviceInfo(f);
     if (di){
-      S.swMajor = di.major;
-      S.devName = di.model || null; S.swText = di.sw || null;
-      applyFrameOffset();
-      updateBadges();
+      S.swMajor = di.major; S.devName = di.model || null; S.swText = di.sw || null;
+      applyFrameOffset(); updateBadges();
       const layoutTxt = S.mode === 'auto'
         ? t('logAutoDet') + (di.major >= 11 ? ' fw≥11 (offset 32)' : ' fw<11 (offset 0)')
         : t('logManual');
@@ -501,7 +610,9 @@ function handleFrame(f){
       if (st.numCells >= 1 && st.numCells <= 32) S.numCells = st.numCells;
       if (st.capAh > 0) S.capSetAh = st.capAh;
       S.sw.charge = st.chargeSw; S.sw.discharge = st.dischargeSw; S.sw.balance = st.balanceSw;
+      S.settings = decodeSettingsFull(f);
       renderSwitches();
+      if (S.settingsVisible) renderSettings();
     }
   } else if (f[4] === 0x02){
     const d = decodeCellInfo(f, effectiveOffset());
@@ -518,26 +629,34 @@ function applyFrameOffset(){
   else S.frameOff = (S.swMajor !== null && S.swMajor < 11) ? 0 : 32;
 }
 
-function effectiveOffset(){
-  if (S.frameOff === null) applyFrameOffset();
-  return S.frameOff;
-}
+function effectiveOffset(){ if (S.frameOff === null) applyFrameOffset(); return S.frameOff; }
 
 $('modeSel').addEventListener('change', () => { S.mode = $('modeSel').value; applyFrameOffset(); });
 
 function decodeDeviceInfo(f){
-  const model = txt(f, 6, 16);
-  const hw = txt(f, 22, 8);
-  const sw = txt(f, 30, 8);
+  const model = txt(f, 6, 16); const hw = txt(f, 22, 8); const sw = txt(f, 30, 8);
   const m = sw.match(/^(\d+)/);
   return { model, hw, sw, major: m ? parseInt(m[1]) : NaN };
 }
 
 function decodeSettings(f){
+  return { numCells: f[114], chargeSw: !!f[118], dischargeSw: !!f[122], balanceSw: !!f[126], capAh: u32(f, 130) / 1000 };
+}
+
+function decodeSettingsFull(f){
   return {
-    numCells: f[114],
-    chargeSw: !!f[118], dischargeSw: !!f[122], balanceSw: !!f[126],
-    capAh: u32(f, 130) / 1000,
+    smartSleepV: u32(f, 6) / 1000, uvp: u32(f, 10) / 1000, uvpr: u32(f, 14) / 1000,
+    ovp: u32(f, 18) / 1000, ovpr: u32(f, 22) / 1000, balTriggerV: u32(f, 26) / 1000,
+    soc100V: u32(f, 30) / 1000, soc0V: u32(f, 34) / 1000, rcv: u32(f, 38) / 1000,
+    rfv: u32(f, 42) / 1000, powerOffV: u32(f, 46) / 1000, maxChgCur: u32(f, 50) / 1000,
+    chgOcpDelay: u32(f, 54), chgOcpRecovery: u32(f, 58), maxDisCur: u32(f, 62) / 1000,
+    disOcpDelay: u32(f, 66), disOcpRecovery: u32(f, 70), shortCircuitRecovery: u32(f, 74),
+    maxBalCur: u32(f, 78) / 1000, chgOtp: s32(f, 82) / 10, chgOtpRe: s32(f, 86) / 10,
+    disOtp: s32(f, 90) / 10, disOtpRe: s32(f, 94) / 10, chgUtp: s32(f, 98) / 10,
+    chgUtpRe: s32(f, 102) / 10, mosOtp: s32(f, 106) / 10, mosOtpRe: s32(f, 110) / 10,
+    cellCount: f[114], chargeSw: !!f[118], dischargeSw: !!f[122], balanceSw: !!f[126],
+    capAh: u32(f, 130) / 1000, shortCircuitDelay: u32(f, 134), startBalV: u32(f, 138) / 1000,
+    devAddr: f[270], prechargeTime: u32(f, 274),
   };
 }
 
@@ -554,44 +673,27 @@ function decodeCellInfo(f, off){
     if (mv > 0 && mv < 65000) volts.push(mv);
   }
   if (!volts.length) return null;
-
   const minMv = Math.min(...volts), maxMv = Math.max(...volts);
   const socByte = f[141 + off];
   const remAh = u32(f, 142 + off) / 1000;
   const agedAh = u32(f, 146 + off) / 1000;
-
   let soc;
-  if (off === 32 && agedAh > 0 && remAh > 0){
-    soc = Math.round(remAh / agedAh * 10000) / 100;
-  } else {
-    soc = socByte;
-  }
-
+  if (off === 32 && agedAh > 0 && remAh > 0){ soc = Math.round(remAh / agedAh * 10000) / 100; }
+  else { soc = socByte; }
   const volt = u32(f, 118 + off) / 1000;
   const curr = s32(f, 126 + off) / 1000;
   const errMask = off === 32 ? u32(f, 134 + off) : u16(f, 136 + off);
-
   return {
-    cells: volts,
-    minMv, maxMv,
+    cells: volts, minMv, maxMv,
     minIdx: volts.indexOf(minMv) + 1, maxIdx: volts.indexOf(maxMv) + 1,
     avgV: volts.reduce((a,b)=>a+b,0) / volts.length / 1000,
-    deltaMv: maxMv - minMv,
-    volt, curr,
-    power: volt * curr,
-    t1: saneTemp(s16(f, 130 + off)),
-    t2: saneTemp(s16(f, 132 + off)),
+    deltaMv: maxMv - minMv, volt, curr, power: volt * curr,
+    t1: saneTemp(s16(f, 130 + off)), t2: saneTemp(s16(f, 132 + off)),
     mosT: off === 32 ? saneTemp(s16(f, 112 + off)) : saneTemp(s16(f, 134 + off)),
-    balCur: s16(f, 138 + off) / 1000,
-    balAct: f[140 + off],
-    soc, socByte,
-    remAh, agedAh,
-    cycles: u32(f, 150 + off),
-    soh: off === 32 ? f[158 + off] : null,
-    uptime: u32(f, 162 + off),
-    emergency: u16(f, 186 + off),
-    fetCharge: !!f[166 + off], fetDis: !!f[167 + off],
-    errMask,
+    balCur: s16(f, 138 + off) / 1000, balAct: f[140 + off],
+    soc, socByte, remAh, agedAh, cycles: u32(f, 150 + off),
+    soh: off === 32 ? f[158 + off] : null, uptime: u32(f, 162 + off),
+    emergency: u16(f, 186 + off), fetCharge: !!f[166 + off], fetDis: !!f[167 + off], errMask,
   };
 }
 
@@ -601,18 +703,14 @@ function fmtUptime(s){
 }
 
 function setBadge(id, text, on, cls){
-  const el = $(id);
-  el.textContent = text;
-  el.className = 'badge' + (on && cls ? ' ' + cls : '');
+  const el = $(id); el.textContent = text; el.className = 'badge' + (on && cls ? ' ' + cls : '');
 }
 
 function updateBadges(){
   const d = S.last;
   setBadge('bDev', t('devBadge') + ': ' + (S.devName || '--') + (S.swText ? ' · FW ' + S.swText : ''), false, '');
-  setBadge('bCharge', t('mosCharge') + ': ' + (d ? (d.fetCharge ? t('on') : t('off')) : '--'),
-    !!(d && d.fetCharge), 'on');
-  setBadge('bDischarge', t('mosDischarge') + ': ' + (d ? (d.fetDis ? t('on') : t('off')) : '--'),
-    !!(d && d.fetDis), 'on');
+  setBadge('bCharge', t('mosCharge') + ': ' + (d ? (d.fetCharge ? t('on') : t('off')) : '--'), !!(d && d.fetCharge), 'on');
+  setBadge('bDischarge', t('mosDischarge') + ': ' + (d ? (d.fetDis ? t('on') : t('off')) : '--'), !!(d && d.fetDis), 'on');
   const balTxt = ['IDLE', 'ON (+)', 'ON (-)'][d ? d.balAct : 0] || '';
   setBadge('bBal', t('balancing') + ': ' + (d ? balTxt : '--'), !!(d && d.balAct !== 0), 'bal');
   setBadge('bErr', !d ? (t('errBadge') + ': --')
@@ -631,18 +729,12 @@ function renderCellInfo(d){
   $('soh').textContent = d.soh !== null ? d.soh + '%' : '--';
   $('cycles').textContent = d.cycles;
   $('volt').textContent = d.volt.toFixed(3);
-
   const cu = $('curr'); cu.textContent = d.curr.toFixed(2);
   const dirCls = d.curr > 0.05 ? 'good' : d.curr < -0.05 ? 'bad' : '';
   const curTile = cu.parentElement.parentElement;
   const pwTile = $('power').parentElement.parentElement;
-  curTile.classList.remove('good','warn','bad');
-  pwTile.classList.remove('good','warn','bad');
-  if (dirCls){
-    curTile.classList.add(dirCls);
-    pwTile.classList.add(dirCls);
-  }
-
+  curTile.classList.remove('good','warn','bad'); pwTile.classList.remove('good','warn','bad');
+  if (dirCls){ curTile.classList.add(dirCls); pwTile.classList.add(dirCls); }
   $('power').textContent = Math.abs(d.power).toFixed(0);
   $('nCells').textContent = d.cells.length;
   $('cMin').textContent = (d.minMv/1000).toFixed(3); $('cMinIdx').textContent = d.minIdx;
@@ -655,26 +747,20 @@ function renderCellInfo(d){
   $('tMos').textContent = d.mosT === null ? '--' : d.mosT.toFixed(1);
   $('balCur').textContent = d.balCur.toFixed(2);
   $('uptime').textContent = fmtUptime(d.uptime);
-
   S.emergencyOn = d.emergency > 0;
-  updateBadges();
-  renderSwitches();
-  renderCells(d.cells, d.minIdx, d.maxIdx);
+  updateBadges(); renderSwitches();
+  renderCells(d.cells, d.minMv, d.maxMv);
   updateSparks();
-
   log(t('logCellOk') + ' SOC=' + $('socBig').textContent + '% | ' +
       d.volt.toFixed(2) + 'V | ' + d.curr.toFixed(2) + 'A | ' + d.remAh.toFixed(1) + '/' +
       ((S.capSetAh || d.agedAh || 0)) + 'Ah');
 }
 
 let prevCells = [];
-function renderCells(volts, minIdx, maxIdx){
+function renderCells(volts, minMv, maxMv){
   const wrap = $('cells');
   $('cellCount').textContent = '(' + volts.length + ')';
-  if (prevCells.length !== volts.length){
-    wrap.innerHTML = '';
-    prevCells = [];
-  }
+  if (prevCells.length !== volts.length){ wrap.innerHTML = ''; prevCells = []; }
   while (wrap.children.length < volts.length){
     const c = document.createElement('div');
     c.className = 'cell';
@@ -684,38 +770,102 @@ function renderCells(volts, minIdx, maxIdx){
   [...wrap.children].forEach((el, i) => {
     el.querySelector('.n').textContent = 'C' + (i+1);
     el.querySelector('.m').textContent = (volts[i]/1000).toFixed(3);
-    el.classList.toggle('min', i+1 === minIdx);
-    el.classList.toggle('max', i+1 === maxIdx);
+    el.classList.toggle('min', volts[i] === minMv);
+    el.classList.toggle('max', volts[i] === maxMv);
   });
   prevCells = volts.slice();
 }
 
 function renderSwitches(){
   for (const key of ['charge', 'discharge', 'balance']){
-    const el = $(SW_BTN[key]);
-    const st = S.sw[key];
-    const on = st === true;
+    const el = $(SW_BTN[key]); const st = S.sw[key]; const on = st === true;
     el.querySelector('span').textContent = st === null ? '--' : (on ? t('stOn') : t('stOff'));
-    el.classList.toggle('active', on);
-    el.disabled = !connected();
+    el.classList.toggle('active', on); el.disabled = !connected();
   }
   const em = $(SW_BTN.emergency);
-  em.querySelector('span').textContent =
-    S.frameOff === 0 ? t('stUnsupported') : (S.emergencyOn ? t('stOn') + '!' : t('stOff'));
+  em.querySelector('span').textContent = S.frameOff === 0 ? t('stUnsupported') : (S.emergencyOn ? t('stOn') + '!' : t('stOff'));
   em.classList.toggle('active', S.emergencyOn);
   em.disabled = !connected() || S.frameOff === 0;
 }
 
+const SETTINGS_META = [
+  { key: 'ovp', label: { vi: 'Quá điện áp (OVP)', en: 'Over-voltage (OVP)' }, unit: 'V', group: 'charge' },
+  { key: 'ovpr', label: { vi: 'Phục hồi OVP', en: 'OVP recovery' }, unit: 'V', group: 'charge' },
+  { key: 'maxChgCur', label: { vi: 'Dòng sạc tối đa', en: 'Max charge current' }, unit: 'A', group: 'charge' },
+  { key: 'chgOcpDelay', label: { vi: 'Trì hoãn quá dòng sạc', en: 'Charge OCP delay' }, unit: 's', group: 'charge' },
+  { key: 'chgOcpRecovery', label: { vi: 'Phục hồi quá dòng sạc', en: 'Charge OCP recovery' }, unit: 's', group: 'charge' },
+  { key: 'uvp', label: { vi: 'Thấp điện áp (UVP)', en: 'Under-voltage (UVP)' }, unit: 'V', group: 'discharge' },
+  { key: 'uvpr', label: { vi: 'Phục hồi UVP', en: 'UVP recovery' }, unit: 'V', group: 'discharge' },
+  { key: 'maxDisCur', label: { vi: 'Dòng xả tối đa', en: 'Max discharge current' }, unit: 'A', group: 'discharge' },
+  { key: 'disOcpDelay', label: { vi: 'Trì hoãn quá dòng xả', en: 'Discharge OCP delay' }, unit: 's', group: 'discharge' },
+  { key: 'disOcpRecovery', label: { vi: 'Phục hồi quá dòng xả', en: 'Discharge OCP recovery' }, unit: 's', group: 'discharge' },
+  { key: 'shortCircuitDelay', label: { vi: 'Phục hồi ngắn mạch', en: 'Short circuit recovery' }, unit: 's', group: 'discharge' },
+  { key: 'balTriggerV', label: { vi: 'Điện áp bắt đầu cân bằng', en: 'Balance trigger voltage' }, unit: 'V', group: 'balance' },
+  { key: 'startBalV', label: { vi: 'Điện áp bắt đầu cân bằng 2', en: 'Start balance voltage' }, unit: 'V', group: 'balance' },
+  { key: 'maxBalCur', label: { vi: 'Dòng cân bằng tối đa', en: 'Max balance current' }, unit: 'A', group: 'balance' },
+  { key: 'chgOtp', label: { vi: 'Quá nhiệt sạc', en: 'Charge OTP' }, unit: '°C', group: 'temp' },
+  { key: 'chgOtpRe', label: { vi: 'Phục hồi quá nhiệt sạc', en: 'Charge OTP recovery' }, unit: '°C', group: 'temp' },
+  { key: 'disOtp', label: { vi: 'Quá nhiệt xả', en: 'Discharge OTP' }, unit: '°C', group: 'temp' },
+  { key: 'disOtpRe', label: { vi: 'Phục hồi quá nhiệt xả', en: 'Discharge OTP recovery' }, unit: '°C', group: 'temp' },
+  { key: 'chgUtp', label: { vi: 'Thấp nhiệt sạc', en: 'Charge UTP' }, unit: '°C', group: 'temp' },
+  { key: 'chgUtpRe', label: { vi: 'Phục hồi thấp nhiệt sạc', en: 'Charge UTP recovery' }, unit: '°C', group: 'temp' },
+  { key: 'mosOtp', label: { vi: 'Quá nhiệt MOS', en: 'MOS OTP' }, unit: '°C', group: 'temp' },
+  { key: 'mosOtpRe', label: { vi: 'Phục hồi quá nhiệt MOS', en: 'MOS OTP recovery' }, unit: '°C', group: 'temp' },
+  { key: 'smartSleepV', label: { vi: 'Điện áp sleep', en: 'Smart sleep voltage' }, unit: 'V', group: 'general' },
+  { key: 'soc100V', label: { vi: 'Điện áp SOC 100%', en: 'SOC 100% voltage' }, unit: 'V', group: 'general' },
+  { key: 'soc0V', label: { vi: 'Điện áp SOC 0%', en: 'SOC 0% voltage' }, unit: 'V', group: 'general' },
+  { key: 'rcv', label: { vi: 'Điện áp sạc yêu cầu (RCV)', en: 'Request charge voltage' }, unit: 'V', group: 'general' },
+  { key: 'rfv', label: { vi: 'Điện áp nổi (RFV)', en: 'Request float voltage' }, unit: 'V', group: 'general' },
+  { key: 'powerOffV', label: { vi: 'Điện áp tắt', en: 'Power off voltage' }, unit: 'V', group: 'general' },
+  { key: 'cellCount', label: { vi: 'Số cell', en: 'Cell count' }, unit: '', group: 'general' },
+  { key: 'capAh', label: { vi: 'Dung lượng cấu hình', en: 'Configured capacity' }, unit: 'Ah', group: 'general' },
+  { key: 'prechargeTime', label: { vi: 'Thời gian sạc trước', en: 'Precharge time' }, unit: 's', group: 'general' },
+  { key: 'devAddr', label: { vi: 'Địa chỉ thiết bị', en: 'Device address' }, unit: '', group: 'general' },
+  { key: 'chargeSw', label: { vi: 'Công tắc sạc', en: 'Charge switch' }, unit: '', group: 'switches', bool: true },
+  { key: 'dischargeSw', label: { vi: 'Công tắc xả', en: 'Discharge switch' }, unit: '', group: 'switches', bool: true },
+  { key: 'balanceSw', label: { vi: 'Công tắc cân bằng', en: 'Balance switch' }, unit: '', group: 'switches', bool: true },
+];
+const SETTINGS_GROUPS = {
+  charge: { vi: 'Bảo vệ sạc', en: 'Charge Protection' },
+  discharge: { vi: 'Bảo vệ xả', en: 'Discharge Protection' },
+  balance: { vi: 'Cân bằng', en: 'Balance' },
+  temp: { vi: 'Nhiệt độ', en: 'Temperature' },
+  general: { vi: 'Thông số chung', en: 'General' },
+  switches: { vi: 'Công tắc', en: 'Switches' },
+};
+
+function renderSettings(){
+  const grid = $('settingsGrid'); const st = S.settings;
+  if (!st || !st.capAh){ grid.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem">' + (lang === 'vi' ? 'Chưa nhận được cài đặt từ BMS.' : 'No settings received from BMS yet.') + '</p>'; return; }
+  const grouped = {};
+  for (const m of SETTINGS_META){ const g = m.group; if (!grouped[g]) grouped[g] = []; grouped[g].push(m); }
+  let html = '';
+  for (const [gKey, items] of Object.entries(grouped)){
+    const gLabel = SETTINGS_GROUPS[gKey] ? SETTINGS_GROUPS[gKey][lang] : gKey;
+    html += '<div class="setting-group"><h3>' + gLabel + '</h3>';
+    for (const m of items){
+      const val = st[m.key];
+      const display = val === undefined || val === null ? '--' : (m.bool ? (val ? t('on') : t('off')) : (typeof val === 'number' ? (Number.isInteger(val) ? val : val.toFixed(val % 1 === 0 ? 0 : 1)) : val) + ' ' + m.unit);
+      html += '<div class="setting-row"><span class="sk">' + m.label[lang] + '</span><span class="sv">' + display + '</span></div>';
+    }
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+$('btnSettings').addEventListener('click', () => {
+  S.settingsVisible = !S.settingsVisible;
+  $('settingsSection').hidden = !S.settingsVisible;
+  if (S.settingsVisible) renderSettings();
+});
+
 async function writeCmd(addr, on){
   const f = new Uint8Array(20);
   f[0] = 0xAA; f[1] = 0x55; f[2] = 0x90; f[3] = 0xEB;
-  f[4] = addr; f[5] = 0x04;
-  f[6] = on ? 0x01 : 0x00;
+  f[4] = addr; f[5] = 0x04; f[6] = on ? 0x01 : 0x00;
   f[19] = sum8(f, 19);
-  try{
-    await writeChar(f);
-    return true;
-  }catch(e){ log(t('logWriteErr') + ' ' + e.message); return false; }
+  try{ await writeChar(f); return true; }
+  catch(e){ log(t('logWriteErr') + ' ' + e.message); return false; }
 }
 
 async function sendSwitch(key){
@@ -731,9 +881,7 @@ async function sendSwitch(key){
   }
   const ok = await writeCmd(SW_ADDR[key], on);
   if (ok){
-    log(t('logSent').replace('{0}', key.toUpperCase())
-       .replace('{1}', on ? t('on') : t('off'))
-       .replace('{2}', SW_ADDR[key].toString(16)));
+    log(t('logSent').replace('{0}', key.toUpperCase()).replace('{1}', on ? t('on') : t('off')).replace('{2}', SW_ADDR[key].toString(16)));
     setTimeout(() => { if (connected()) sendCmd(CMD_CELL_INFO); }, 400);
   }
 }
@@ -745,19 +893,13 @@ function applyI18n(){
   document.body.classList.toggle('vi', lang === 'vi');
   $('btnLang').textContent = lang === 'vi' ? 'EN' : 'VI';
   $('btnLang').title = lang === 'vi' ? 'Switch to English' : 'Chuyển sang tiếng Việt';
-  setState(S.stateKey);
-  setPopupConnecting(S.popupConnecting);
+  setState(S.stateKey); setPopupConnecting(S.popupConnecting);
 }
 
 async function detectLang(){
   const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('jk_lang') : null;
   if (saved === 'vi' || saved === 'en') return saved;
-  const byIp = async url => {
-    const r = await fetch(url);
-    const j = await r.json();
-    const cc = j.country_code || j.countryCode || '';
-    return cc === 'VN' ? 'vi' : 'en';
-  };
+  const byIp = async url => { const r = await fetch(url); const j = await r.json(); const cc = j.country_code || j.countryCode || ''; return cc === 'VN' ? 'vi' : 'en'; };
   if (typeof fetch === 'function'){
     try{ return await byIp('https://get.geojs.io/v1/ip/country.json'); }catch(e){}
     try{ return await byIp('https://ipapi.co/json/'); }catch(e){}
@@ -766,10 +908,7 @@ async function detectLang(){
   return nav.startsWith('vi') ? 'vi' : 'en';
 }
 
-if (typeof localStorage !== 'undefined'){
-  const th = localStorage.getItem('jk_theme');
-  if (th === 'light') document.body.classList.remove('dark');
-}
+if (typeof localStorage !== 'undefined'){ const th = localStorage.getItem('jk_theme'); if (th === 'light') document.body.classList.remove('dark'); }
 $('btnTheme').addEventListener('click', () => {
   const dark = document.body.classList.toggle('dark');
   $('btnTheme').innerHTML = dark ? '&#9789;' : '&#9788;';
@@ -778,17 +917,13 @@ $('btnTheme').addEventListener('click', () => {
 $('btnLang').addEventListener('click', () => {
   lang = lang === 'vi' ? 'en' : 'vi';
   if (typeof localStorage !== 'undefined') localStorage.setItem('jk_lang', lang);
-  applyI18n();
+  applyI18n(); if (S.settingsVisible) renderSettings();
 });
 
 for (const key of Object.keys(SW_BTN)) $(SW_BTN[key]).addEventListener('click', () => sendSwitch(key));
 if (!IS_MOBILE) $('logPanel').style.display = 'none';
-if (!navigator.bluetooth){
-  $('noSupport').hidden = false;
-  $('btnConnect').disabled = true;
-} else {
-  $('btnConnect').addEventListener('click', connect);
-}
+if (!navigator.bluetooth){ $('noSupport').hidden = false; $('btnConnect').disabled = true; }
+else { $('btnConnect').addEventListener('click', connect); }
 $('btnDisconnect').addEventListener('click', disconnect);
 $('btnPopupConnect').addEventListener('click', connect);
 $('btnTheme').innerHTML = document.body.classList.contains('dark') ? '&#9789;' : '&#9788;';
